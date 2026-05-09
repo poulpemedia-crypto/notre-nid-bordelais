@@ -491,6 +491,30 @@ input, select { border: none; background: none; }
   font-family: inherit;
 }
 
+/* Affichage lecture seule (pas d'input) */
+.amt-display {
+  display: inline-block;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  padding: 3px 6px;
+  min-width: 40px;
+  text-align: right;
+}
+.amt-display-big {
+  display: inline-block;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: clamp(28px, 3vw, 36px);
+  letter-spacing: -0.025em;
+  line-height: 1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
 /* Big amount input for non-sub postes */
 .amt-input-big {
   width: 100%;
@@ -1310,17 +1334,17 @@ const ENTRY_MIGRATIONS = {
 let state = loadState();
 
 function loadState() {
+  /* Mode lecture seule : les budgets viennent toujours de DEFAULT_CATEGORIES (hardcodés).
+     Seule la photo est conservée en localStorage pour la personnalisation. */
+  let photo = null;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const p = JSON.parse(raw);
-      return {
-        photo: p.photo || null,
-        categories: mergeCategories(DEFAULT_CATEGORIES, p.categories || {})
-      };
+      photo = p.photo || null;
     }
   } catch(e) { console.warn(e); }
-  return { photo: null, categories: structuredClone(DEFAULT_CATEGORIES) };
+  return { photo, categories: structuredClone(DEFAULT_CATEGORIES) };
 }
 
 function migrateEntries(entries) {
@@ -1368,10 +1392,8 @@ function mergeCategories(d, s) {
 }
 
 function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({
-    photo: state.photo,
-    categories: state.categories
-  }));
+  /* Mode lecture seule : on ne sauvegarde que la photo */
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ photo: state.photo }));
 }
 
 /* MONEY */
@@ -1570,7 +1592,7 @@ function renderPostes() {
           <div class="row${isFs ? ' row-special' : ''}">
             <label>${lbl}</label>
             <div class="versus">
-              <input type="number" min="0" step="1" class="amt-input mono" data-cat="${key}" data-sub="${sk}" value="${sv.budget || ''}" placeholder="0"/>
+              <span class="amt-display mono">${fmtCompact(sv.budget || 0)}</span>
               <span class="cur">€</span>
             </div>
           </div>
@@ -1581,7 +1603,7 @@ function renderPostes() {
           <div class="row row-special">
             <label>Famille Sol participe</label>
             <div class="versus">
-              <input type="number" min="0" step="1" class="amt-input mono" data-cat="${key}" data-special="familleSolContrib" value="${cat.familleSolContrib || ''}" placeholder="0"/>
+              <span class="amt-display mono">${fmtCompact(cat.familleSolContrib || 0)}</span>
               <span class="cur">€</span>
             </div>
           </div>
@@ -1591,7 +1613,7 @@ function renderPostes() {
     } else {
       html += `
         <div class="amt-big-wrap">
-          <input type="number" min="0" step="1" class="amt-input-big mono" data-cat="${key}" value="${cat.budget || ''}" placeholder="0"/>
+          <span class="amt-display-big mono">${fmtCompact(cat.budget || 0)}</span>
           <sup class="amt-big-cur">€</sup>
         </div>
         <div class="poste-sub" style="margin-top: 6px;">${cat.isIncome ? 'mensuel · entrée' : 'mensuel'}</div>
@@ -1602,7 +1624,7 @@ function renderPostes() {
           <div class="row row-special">
             <label>Famille Sol participe</label>
             <div class="versus">
-              <input type="number" min="0" step="1" class="amt-input mono" data-cat="${key}" data-special="familleSolContrib" value="${cat.familleSolContrib || ''}" placeholder="0"/>
+              <span class="amt-display mono">${fmtCompact(cat.familleSolContrib || 0)}</span>
               <span class="cur">€</span>
             </div>
           </div>
@@ -1622,31 +1644,7 @@ function renderPostes() {
   pieCard.innerHTML = buildPieCardHTML();
   grid.appendChild(pieCard);
 
-  bindBudgetInputs();
-}
-
-function bindBudgetInputs() {
-  document.querySelectorAll('.amt-input').forEach(inp => {
-    inp.addEventListener('focus', () => inp.select());
-    inp.addEventListener('input', onBudgetChange);
-    inp.addEventListener('change', onBudgetChange);
-  });
-  document.querySelectorAll('.amt-input-big').forEach(inp => {
-    inp.addEventListener('focus', () => inp.select());
-    inp.addEventListener('input', onBudgetChange);
-  });
-}
-
-function onBudgetChange(e) {
-  const inp = e.target;
-  const v = Number(inp.value) || 0;
-  const k = inp.dataset.cat, sk = inp.dataset.sub, special = inp.dataset.special;
-  if (special) state.categories[k][special] = v;
-  else if (sk) state.categories[k].sub[sk].budget = v;
-  else state.categories[k].budget = v;
-  saveState();
-  updateCardSummary(k);
-  refreshPie();
+  /* Mode lecture seule : aucun binding nécessaire pour les budgets, valeurs hardcodées */
 }
 
 function updateCardSummary(key) {
