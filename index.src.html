@@ -1200,15 +1200,16 @@ input, select { border: none; background: none; }
     </div>
 
     <div class="shelf-stage">
-      <div class="shelf-frame" id="photoSlot" role="button" tabindex="0" aria-label="Changer la photo">
+      <div class="shelf-frame">
         <div class="shelf-photo-outer">
           <div class="shelf-photo-mat">
             <div class="shelf-photo" id="photoBox">
-              <div class="placeholder" id="photoPlaceholder">
+              <img src="couple.png" alt="Charline et Baltazar"
+                   onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'"/>
+              <div class="placeholder" id="photoPlaceholder" style="display:none">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                <span>Cliquer pour ajouter</span>
+                <span>couple.png manquant</span>
               </div>
-              <img id="photoImg" alt="" style="display:none"/>
             </div>
           </div>
           <div class="shelf-photo-caption"><span>Charline &amp; Baltazar</span></div>
@@ -1217,7 +1218,6 @@ input, select { border: none; background: none; }
       </div>
       <div class="shelf-plank"></div>
     </div>
-    <input type="file" id="photoInput" accept="image/*" style="display:none"/>
   </section>
 
   <!-- POSTES -->
@@ -1742,25 +1742,12 @@ function renderEntries() {
   }));
 }
 
-/* PHOTO */
-function renderPhoto() {
-  const img = document.getElementById('photoImg');
-  const ph = document.getElementById('photoPlaceholder');
-  if (state.photo) { img.src = state.photo; img.style.display = 'block'; ph.style.display = 'none'; }
-  else { img.removeAttribute('src'); img.style.display = 'none'; ph.style.display = 'flex'; }
-}
-function setPhoto(d) { state.photo = d; saveState(); renderPhoto(); }
-function pickPhoto() { document.getElementById('photoInput').click(); }
-document.getElementById('photoInput').addEventListener('change', e => {
-  const f = e.target.files[0]; if (!f) return;
-  const r = new FileReader();
-  r.onload = ev => { setPhoto(ev.target.result); toast('Photo ajoutée'); };
-  r.readAsDataURL(f);
-});
-document.getElementById('photoSlot').addEventListener('click', pickPhoto);
-document.getElementById('photoSlot').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pickPhoto(); } });
-document.getElementById('changePhotoBtn').addEventListener('click', pickPhoto);
-document.getElementById('removePhotoBtn').addEventListener('click', () => { setPhoto(null); toast('Photo retirée'); });
+/* PHOTO — hardcodée dans le HTML (couple.png) */
+function renderPhoto() { /* no-op : l'image est dans le HTML, pas dans le state */ }
+function setPhoto() {}
+function pickPhoto() {}
+document.getElementById('changePhotoBtn')?.addEventListener('click', () => {});
+document.getElementById('removePhotoBtn')?.addEventListener('click', () => {});
 
 /* DRAWER */
 function openDrawer() {
