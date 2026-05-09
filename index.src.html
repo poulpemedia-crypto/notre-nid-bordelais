@@ -1286,38 +1286,38 @@ const DEFAULT_CATEGORIES = {
   loyer: {
     name: 'Loyer', color: '#E84C3D', /* Rouge Cerise */
     sub: {
-      charline:    { name: 'Charline',    budget: 0 },
-      baltazar:    { name: 'Baltazar',    budget: 0 },
-      famille_sol: { name: 'Famille Sol', budget: 0 }
+      charline:    { name: 'Charline',    budget: 300 },
+      baltazar:    { name: 'Baltazar',    budget: 300 },
+      famille_sol: { name: 'Famille Sol', budget: 400 }
     }
   },
   charges: {
     name: 'Charges', color: '#2C3E50', /* Gris Anthracite */
     sub: {
-      electricite: { name: 'Électricité', budget: 0 },
-      gaz:         { name: 'Gaz',         budget: 0 },
-      eau:         { name: 'Eau',         budget: 0 },
-      assurances:  { name: 'Assurances',  budget: 0 }
+      electricite: { name: 'Électricité', budget: 55 },
+      gaz:         { name: 'Gaz',         budget: 80 },
+      eau:         { name: 'Eau',         budget: 20 },
+      assurances:  { name: 'Assurances',  budget: 45 }
     },
-    familleSolContrib: 0
+    familleSolContrib: 200
   },
   confort: {
     name: 'Confort appartement', color: '#8E353B', /* Bourgogne Doux */
     sub: {
-      internet:        { name: 'Internet',        budget: 0 },
-      mobile_charline: { name: 'Mobile Charline', budget: 0 },
-      mobile_baltazar: { name: 'Mobile Baltazar', budget: 0 }
+      internet:        { name: 'Internet',        budget: 29.99 },
+      mobile_charline: { name: 'Mobile Charline', budget: 14.99 },
+      mobile_baltazar: { name: 'Mobile Baltazar', budget: 14.99 }
     },
-    familleSolContrib: 0
+    familleSolContrib: 59.97
   },
-  nourriture: { name: 'Courses', budget: 0, color: '#F1C40F', illustration: 'les%20cuisiniers.png', familleSolContrib: 0 }, /* Jaune Pikachu */
-  transports: { name: 'Transports', budget: 0, color: '#D2B48C', familleSolContrib: 0 }, /* Beige Sable */
+  nourriture: { name: 'Courses', budget: 200, color: '#F1C40F', illustration: 'les%20cuisiniers.png', familleSolContrib: 90.03 }, /* Jaune Pikachu */
+  transports: { name: 'Transports', budget: 50, color: '#D2B48C', familleSolContrib: 50 }, /* Beige Sable */
   aides: {
     name: 'Aides perçues', color: '#5D9CEC', isIncome: true, /* Bleu Électrique */
     illustration: 'les%20danceurs.png',
     sub: {
-      prime_emploi: { name: 'Prime emploi', budget: 0 },
-      caf:          { name: 'CAF',          budget: 0 }
+      prime_emploi: { name: 'Prime emploi', budget: 100 },
+      caf:          { name: 'CAF',          budget: 200 }
     }
   }
 };
