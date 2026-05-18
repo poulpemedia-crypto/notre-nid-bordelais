@@ -944,6 +944,21 @@ input, select { border: none; background: none; }
   color: var(--ink-4);
   font-style: normal;
 }
+.psr.step {
+  border-top: 1px dashed var(--line-2);
+  margin-top: 4px;
+  padding-top: 8px;
+}
+.psr.step .psr-label,
+.psr.step .psr-value {
+  color: var(--burgundy);
+  font-weight: 700;
+}
+.psr.step .psr-label::before {
+  content: '= ';
+  color: var(--ink-4);
+  font-weight: 400;
+}
 .psr.total {
   border-top: 1px solid var(--line-2);
   margin-top: 4px;
@@ -1520,19 +1535,23 @@ function buildPieCardHTML() {
     </div>
     <div class="pie-summary">
       <div class="psr">
-        <span class="psr-label">Budget mensuel</span>
+        <span class="psr-label">Budget mensuel apparte</span>
         <span class="psr-value">${fmtMoney(total)}</span>
-      </div>
-      <div class="psr income">
-        <span class="psr-label">Aides perçues</span>
-        <span class="psr-value">− ${fmtMoney(aidesTotal)}</span>
       </div>
       <div class="psr fs">
         <span class="psr-label">Famille Sol participe</span>
         <span class="psr-value">− ${fmtMoney(fs)}</span>
       </div>
+      <div class="psr step">
+        <span class="psr-label">À fournir par le couple</span>
+        <span class="psr-value">${fmtMoney(couple)}</span>
+      </div>
+      <div class="psr income">
+        <span class="psr-label">Aides perçues</span>
+        <span class="psr-value">− ${fmtMoney(aidesTotal)}</span>
+      </div>
       <div class="psr total">
-        <span class="psr-label">Sortie de poche / mois<span class="psr-hint">ce que le couple paye pour vivre dans l'appart — ${fmtMoney(net / 2)} chacun</span></span>
+        <span class="psr-label">Coût net mensuel<span class="psr-hint">ce qu'il reste vraiment à payer après les aides</span></span>
         <span class="psr-value">${fmtMoney(net)}</span>
       </div>
     </div>
