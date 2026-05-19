@@ -273,6 +273,107 @@ button, input { font-family: inherit; font-size: inherit; color: inherit; cursor
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+/* TOOLTIP au survol */
+.bar-row { position: relative; }
+.bar-row:hover { cursor: default; }
+.bar-tooltip {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 184px;
+  min-width: 260px;
+  max-width: 320px;
+  background: white;
+  border: 1px solid var(--line-2);
+  border-radius: 16px;
+  padding: 16px 18px;
+  box-shadow: 0 20px 44px -12px rgba(44, 62, 80, 0.22);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-8px);
+  transition: opacity 240ms var(--ease), transform 240ms var(--ease);
+  z-index: 40;
+}
+.bar-row:hover .bar-tooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+.bar-tooltip::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 32px;
+  width: 0; height: 0;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-bottom: 9px solid white;
+  filter: drop-shadow(0 -1px 0 var(--line-2));
+}
+
+/* Dernière ligne : tooltip au-dessus pour éviter de déborder hors carte */
+.bar-row:last-child .bar-tooltip {
+  top: auto;
+  bottom: calc(100% + 12px);
+  transform: translateY(8px);
+}
+.bar-row:last-child:hover .bar-tooltip {
+  transform: translateY(0);
+}
+.bar-row:last-child .bar-tooltip::before {
+  bottom: auto;
+  top: 100%;
+  border-bottom: none;
+  border-top: 9px solid white;
+  filter: drop-shadow(0 1px 0 var(--line-2));
+}
+.tt-eyebrow {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  color: var(--c, var(--ink-3));
+  margin-bottom: 6px;
+}
+.tt-total {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  display: flex; align-items: baseline; gap: 4px;
+  margin-bottom: 12px;
+}
+.tt-total sup {
+  font-size: 0.5em; color: var(--ink-3); font-weight: 500;
+  position: relative; top: -0.05em;
+}
+.tt-sub {
+  list-style: none;
+  display: flex; flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line-2);
+}
+.tt-sub li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.tt-sub li .amt {
+  font-weight: 700; color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.tt-desc {
+  font-size: 13px;
+  color: var(--ink-2);
+  line-height: 1.5;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line-2);
+}
+
 @keyframes row-in {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
@@ -589,11 +690,35 @@ button, input { font-family: inherit; font-size: inherit; color: inherit; cursor
 <script>
 /* DATA */
 const CATEGORIES = {
-  loyer:        { name: 'Loyer',           budget: 1000,  color: '#E84C3D' },
-  charges:      { name: 'Charges',         budget: 200,   color: '#2C3E50' },
-  confort:      { name: 'Confort apparte', budget: 59.97, color: '#8E353B' },
-  alimentation: { name: 'Alimentation',    budget: 200,   color: '#F1C40F' },
-  transport:    { name: 'Transport',       budget: 50,    color: '#D2B48C' }
+  loyer: {
+    name: 'Loyer', budget: 1000, color: '#E84C3D',
+    desc: 'Loyer mensuel de l\'appartement bordelais, charges locatives hors énergie comprises.'
+  },
+  charges: {
+    name: 'Charges', budget: 200, color: '#2C3E50',
+    sub: [
+      { name: 'Électricité', amount: 55 },
+      { name: 'Gaz',         amount: 80 },
+      { name: 'Eau',         amount: 20 },
+      { name: 'Assurances',  amount: 45 }
+    ]
+  },
+  confort: {
+    name: 'Confort apparte', budget: 59.97, color: '#8E353B',
+    sub: [
+      { name: 'Internet',        amount: 29.99 },
+      { name: 'Mobile Charline', amount: 14.99 },
+      { name: 'Mobile Baltazar', amount: 14.99 }
+    ]
+  },
+  alimentation: {
+    name: 'Alimentation', budget: 200, color: '#F1C40F',
+    desc: 'Courses hebdomadaires : supermarché, marché du dimanche, boulangerie, vrac.'
+  },
+  transport: {
+    name: 'Transport', budget: 50, color: '#D2B48C',
+    desc: 'Abonnement TBM (tram/bus Bordeaux), essence d\'appoint et stationnement occasionnel.'
+  }
 };
 const ORDER = ['loyer', 'charges', 'confort', 'alimentation', 'transport'];
 
@@ -622,7 +747,7 @@ document.getElementById('statBiggestPct').textContent = biggestPct + ' %';
 document.getElementById('donutTotal').textContent = fmtInt(total) + ' €';
 document.getElementById('insightBig').textContent = fixedPct + ' %';
 
-/* BAR CHART */
+/* BAR CHART (avec tooltip détail au survol) */
 const barChart = document.getElementById('barChart');
 const maxBudget = Math.max(...ORDER.map(k => CATEGORIES[k].budget));
 ORDER.forEach((k, i) => {
@@ -633,11 +758,27 @@ ORDER.forEach((k, i) => {
   row.className = 'bar-row';
   row.style.setProperty('--c', cat.color);
   row.style.setProperty('--i', i);
+
+  /* Build tooltip body : sub-items OR desc */
+  let ttBody = '';
+  if (cat.sub) {
+    ttBody = '<ul class="tt-sub">' +
+      cat.sub.map(s => `<li><span>${s.name}</span><span class="amt mono">${fmtMoney(s.amount)}</span></li>`).join('') +
+      '</ul>';
+  } else if (cat.desc) {
+    ttBody = `<p class="tt-desc">${cat.desc}</p>`;
+  }
+
   row.innerHTML = `
     <div class="bar-label"><span class="dot"></span>${cat.name}</div>
     <div class="bar-track"><div class="bar-fill" style="--w: ${widthPct}%"></div></div>
     <div class="bar-amount mono">${fmtMoney(cat.budget)}</div>
     <div class="bar-pct mono">${Math.round(pct)} %</div>
+    <div class="bar-tooltip">
+      <div class="tt-eyebrow">${cat.name} · ${Math.round(pct)} % du total</div>
+      <div class="tt-total mono">${fmtMoney(cat.budget)}</div>
+      ${ttBody}
+    </div>
   `;
   barChart.appendChild(row);
 });
