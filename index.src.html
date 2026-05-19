@@ -761,7 +761,6 @@ input, select { border: none; background: none; }
   box-shadow: none;
   padding: var(--s-2) var(--s-3);
   overflow: visible;
-  grid-column: span 2;
 }
 .pie-card:hover {
   transform: none;
@@ -769,9 +768,6 @@ input, select { border: none; background: none; }
   box-shadow: none;
 }
 .pie-card::before { display: none; }
-@media (max-width: 720px) {
-  .pie-card { grid-column: span 1; }
-}
 .pie-body {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -781,9 +777,10 @@ input, select { border: none; background: none; }
 }
 .pie-wrap {
   display: flex;
-  justify-content: flex-start;
+  justify-content: center;
   align-items: center;
   position: relative;
+  margin: var(--s-3) 0 var(--s-2);
 }
 .pie-svg {
   width: 100%;
@@ -1240,9 +1237,9 @@ input, select { border: none; background: none; }
     <div class="section-head">
       <div class="head-l">
         <span class="eyebrow" style="color: var(--orange-deep);">Mais où qui vont mes sousous ?!</span>
-        <h2 class="h2"><span class="thin">Les budgets</span> du <span class="accent">foyer</span>.</h2>
+        <h2 class="h2"><span class="thin">L'appart coûte</span> <span class="accent" id="totalHeadline">1 510</span> <span class="thin">€ / mois</span>.</h2>
       </div>
-      <p class="body" style="max-width: 320px;">Tape les budgets directement dans les cases. Clique « + » pour ajouter une somme versée. Tout est sauvegardé en direct.</p>
+      <p class="body" style="max-width: 320px;">Coût mensuel détaillé poste par poste.</p>
     </div>
 
     <div class="postes-grid" id="postesGrid"></div>
@@ -1294,14 +1291,7 @@ input, select { border: none; background: none; }
 const STORAGE_KEY = 'pilotageCharline_v3';
 
 const DEFAULT_CATEGORIES = {
-  loyer: {
-    name: 'Loyer', color: '#E84C3D', /* Rouge Cerise */
-    sub: {
-      charline:    { name: 'Charline',    budget: 300 },
-      baltazar:    { name: 'Baltazar',    budget: 300 },
-      famille_sol: { name: 'Famille Sol', budget: 400 }
-    }
-  },
+  loyer: { name: 'Loyer', budget: 1000, color: '#E84C3D' }, /* Rouge Cerise */
   charges: {
     name: 'Charges', color: '#2C3E50', /* Gris Anthracite */
     sub: {
@@ -1309,8 +1299,7 @@ const DEFAULT_CATEGORIES = {
       gaz:         { name: 'Gaz',         budget: 80 },
       eau:         { name: 'Eau',         budget: 20 },
       assurances:  { name: 'Assurances',  budget: 45 }
-    },
-    familleSolContrib: 200
+    }
   },
   confort: {
     name: 'Confort appartement', color: '#8E353B', /* Bourgogne Doux */
@@ -1318,22 +1307,13 @@ const DEFAULT_CATEGORIES = {
       internet:        { name: 'Internet',        budget: 29.99 },
       mobile_charline: { name: 'Mobile Charline', budget: 14.99 },
       mobile_baltazar: { name: 'Mobile Baltazar', budget: 14.99 }
-    },
-    familleSolContrib: 59.97
-  },
-  nourriture: { name: 'Courses', budget: 200, color: '#F1C40F', illustration: 'les%20cuisiniers.png', familleSolContrib: 90.03 }, /* Jaune Pikachu */
-  transports: { name: 'Transports', budget: 50, color: '#D2B48C', familleSolContrib: 50 }, /* Beige Sable */
-  aides: {
-    name: 'Aides perçues', color: '#5D9CEC', isIncome: true, /* Bleu Électrique */
-    illustration: 'les%20danceurs.png',
-    sub: {
-      prime_emploi: { name: 'Prime emploi', budget: 100 },
-      caf:          { name: 'CAF',          budget: 200 }
     }
-  }
+  },
+  alimentation: { name: 'Alimentation', budget: 200, color: '#F1C40F', illustration: 'les%20cuisiniers.png' }, /* Jaune Pikachu */
+  transport:    { name: 'Transport',    budget: 50,  color: '#D2B48C' } /* Beige Sable */
 };
 
-const ORDER = ['loyer', 'charges', 'confort', 'nourriture', 'transports', 'aides'];
+const ORDER = ['loyer', 'charges', 'confort', 'alimentation', 'transport'];
 
 /* Map des migrations de catégories obsolètes vers les nouvelles clés (entries) */
 const ENTRY_MIGRATIONS = {
@@ -1448,18 +1428,13 @@ function familleSolTotal() {
 }
 
 function buildPieCardHTML() {
-  const expensePostes = ORDER.filter(k => !state.categories[k].isIncome);
-  const data = expensePostes.map(k => ({
+  const data = ORDER.map(k => ({
     key: k,
     name: state.categories[k].name,
     color: state.categories[k].color,
     value: totalBudget(state.categories[k])
   }));
   const total = data.reduce((s, d) => s + d.value, 0);
-  const fs = familleSolTotal();
-  const couple = Math.max(0, total - fs);
-  const fsPct = total > 0 ? (fs / total) * 100 : 0;
-  const couplePct = total > 0 ? (couple / total) * 100 : 0;
 
   let pieHTML;
   if (total === 0) {
@@ -1495,13 +1470,7 @@ function buildPieCardHTML() {
     }
   }
 
-  /* Bilan : budget brut − aides − famille sol = reste à charge */
-  const aidesTotal = state.categories.aides ? totalBudget(state.categories.aides) : 0;
-  const net = total - aidesTotal - fs;
-  /* Part du couple sur le loyer (Charline + Baltazar) — informatif */
-  const coupleLoyer = (Number(state.categories.loyer?.sub?.charline?.budget) || 0)
-                    + (Number(state.categories.loyer?.sub?.baltazar?.budget) || 0);
-
+  const a = fmtAmount(total);
   const legendHTML = data.map(d => {
     const pct = total > 0 ? (d.value / total) * 100 : 0;
     const cls = d.value === 0 ? 'zero' : '';
@@ -1518,42 +1487,10 @@ function buildPieCardHTML() {
       <span class="dot" style="background: var(--ink-3)"></span>
       <span class="name">Répartition</span>
     </header>
-    <div class="pie-body">
-      <div class="pie-wrap">${pieHTML}</div>
-      <div class="pie-metrics">
-        <div class="metric famille">
-          <span class="metric-label">Famille Sol</span>
-          <span class="metric-value">${total > 0 ? Math.round(fsPct) + '%' : '—'}</span>
-          <span class="metric-amt">${fmtMoney(fs)}</span>
-        </div>
-        <div class="metric couple">
-          <span class="metric-label">Le couple</span>
-          <span class="metric-value">${total > 0 ? Math.round(couplePct) + '%' : '—'}</span>
-          <span class="metric-amt">${fmtMoney(couple)}</span>
-        </div>
-      </div>
-    </div>
-    <div class="pie-summary">
-      <div class="psr">
-        <span class="psr-label">Budget mensuel apparte</span>
-        <span class="psr-value">${fmtMoney(total)}</span>
-      </div>
-      <div class="psr fs">
-        <span class="psr-label">Famille Sol participe</span>
-        <span class="psr-value">− ${fmtMoney(fs)}</span>
-      </div>
-      <div class="psr step">
-        <span class="psr-label">À fournir par le couple</span>
-        <span class="psr-value">${fmtMoney(couple)}</span>
-      </div>
-      <div class="psr income">
-        <span class="psr-label">Aides perçues</span>
-        <span class="psr-value">− ${fmtMoney(aidesTotal)}</span>
-      </div>
-      <div class="psr total">
-        <span class="psr-label">Coût net mensuel<span class="psr-hint">ce qu'il reste vraiment à payer après les aides</span></span>
-        <span class="psr-value">${fmtMoney(net)}</span>
-      </div>
+    <div class="pie-wrap">${pieHTML}</div>
+    <div class="pie-total-line">
+      <span class="pie-amount">${a.sign}${a.intPart}${a.dec}<sup>€</sup></span>
+      <span class="pie-sub">coût total mensuel de l'appart</span>
     </div>
     <div class="poste-divider"></div>
     <ul class="pie-legend">${legendHTML}</ul>
@@ -1601,24 +1538,11 @@ function renderPostes() {
         <div class="poste-rows">
       `;
       for (const [sk, sv] of Object.entries(cat.sub)) {
-        const isFs = sk === 'famille_sol';
-        const lbl = isFs ? `${sv.name} participe` : sv.name;
         html += `
-          <div class="row${isFs ? ' row-special' : ''}">
-            <label>${lbl}</label>
+          <div class="row">
+            <label>${sv.name}</label>
             <div class="versus">
               <span class="amt-display mono">${fmtCompact(sv.budget || 0)}</span>
-              <span class="cur">€</span>
-            </div>
-          </div>
-        `;
-      }
-      if (cat.familleSolContrib !== undefined) {
-        html += `
-          <div class="row row-special">
-            <label>Famille Sol participe</label>
-            <div class="versus">
-              <span class="amt-display mono">${fmtCompact(cat.familleSolContrib || 0)}</span>
               <span class="cur">€</span>
             </div>
           </div>
@@ -1631,20 +1555,8 @@ function renderPostes() {
           <span class="amt-display-big mono">${fmtCompact(cat.budget || 0)}</span>
           <sup class="amt-big-cur">€</sup>
         </div>
-        <div class="poste-sub" style="margin-top: 6px;">${cat.isIncome ? 'mensuel · entrée' : 'mensuel'}</div>
+        <div class="poste-sub" style="margin-top: 6px;">mensuel</div>
       `;
-      if (cat.familleSolContrib !== undefined) {
-        html += `
-          <div class="poste-divider" style="margin-top: var(--s-3);"></div>
-          <div class="row row-special">
-            <label>Famille Sol participe</label>
-            <div class="versus">
-              <span class="amt-display mono">${fmtCompact(cat.familleSolContrib || 0)}</span>
-              <span class="cur">€</span>
-            </div>
-          </div>
-        `;
-      }
     }
 
     card.innerHTML = html;
@@ -1850,6 +1762,15 @@ lightbox.addEventListener('click', e => {
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && lightbox.classList.contains('open')) closeLightbox(); });
 
 renderPhoto(); renderPostes();
+/* Affiche le total dans le H2 du header de section */
+(function () {
+  const totalEl = document.getElementById('totalHeadline');
+  if (totalEl) {
+    const total = ORDER.reduce((s, k) => s + totalBudget(state.categories[k]), 0);
+    const a = fmtAmount(total);
+    totalEl.textContent = `${a.intPart}${a.decRaw > 0 ? a.dec : ''}`;
+  }
+})();
 </script>
 </body>
 </html>
