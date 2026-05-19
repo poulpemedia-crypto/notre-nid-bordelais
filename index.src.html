@@ -275,8 +275,14 @@ button, input { font-family: inherit; font-size: inherit; color: inherit; cursor
 }
 
 /* TOOLTIP au survol */
-.bar-row { position: relative; }
-.bar-row:hover { cursor: default; }
+.bar-row {
+  position: relative;
+  z-index: 1;
+}
+.bar-row:hover {
+  cursor: default;
+  z-index: 50; /* passe au-dessus des autres rows pour que le tooltip ne soit pas couvert */
+}
 .bar-tooltip {
   position: absolute;
   top: calc(100% + 12px);
