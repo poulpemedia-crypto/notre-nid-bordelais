@@ -274,19 +274,10 @@ button, input { font-family: inherit; font-size: inherit; color: inherit; cursor
   font-variant-numeric: tabular-nums;
 }
 
-/* TOOLTIP au survol */
-.bar-row {
-  position: relative;
-  z-index: 1;
-}
-.bar-row:hover {
-  cursor: default;
-  z-index: 50; /* passe au-dessus des autres rows pour que le tooltip ne soit pas couvert */
-}
-.bar-tooltip {
-  position: absolute;
-  top: calc(100% + 12px);
-  left: 184px;
+/* TOOLTIP flottant (un seul au niveau du body, géré en JS) */
+.bar-row { cursor: default; }
+.floating-tooltip {
+  position: fixed;
   min-width: 260px;
   max-width: 320px;
   background: white;
@@ -298,13 +289,12 @@ button, input { font-family: inherit; font-size: inherit; color: inherit; cursor
   pointer-events: none;
   transform: translateY(-8px);
   transition: opacity 240ms var(--ease), transform 240ms var(--ease);
-  z-index: 40;
+  z-index: 9999;
 }
-.bar-row:hover .bar-tooltip {
-  opacity: 1;
-  transform: translateY(0);
-}
-.bar-tooltip::before {
+.floating-tooltip.show { opacity: 1; transform: translateY(0); }
+.floating-tooltip.flip-up { transform: translateY(calc(-100% - 8px)); }
+.floating-tooltip.flip-up.show { transform: translateY(-100%); }
+.floating-tooltip::before {
   content: '';
   position: absolute;
   bottom: 100%;
@@ -315,17 +305,7 @@ button, input { font-family: inherit; font-size: inherit; color: inherit; cursor
   border-bottom: 9px solid white;
   filter: drop-shadow(0 -1px 0 var(--line-2));
 }
-
-/* Dernière ligne : tooltip au-dessus pour éviter de déborder hors carte */
-.bar-row:last-child .bar-tooltip {
-  top: auto;
-  bottom: calc(100% + 12px);
-  transform: translateY(8px);
-}
-.bar-row:last-child:hover .bar-tooltip {
-  transform: translateY(0);
-}
-.bar-row:last-child .bar-tooltip::before {
+.floating-tooltip.flip-up::before {
   bottom: auto;
   top: 100%;
   border-bottom: none;
@@ -693,6 +673,9 @@ button, input { font-family: inherit; font-size: inherit; color: inherit; cursor
 
 </div>
 
+<!-- Tooltip flottant unique (au niveau body pour éviter tout pb de stacking) -->
+<div class="floating-tooltip" id="floatingTooltip"></div>
+
 <script>
 /* DATA */
 const CATEGORIES = {
@@ -753,9 +736,11 @@ document.getElementById('statBiggestPct').textContent = biggestPct + ' %';
 document.getElementById('donutTotal').textContent = fmtInt(total) + ' €';
 document.getElementById('insightBig').textContent = fixedPct + ' %';
 
-/* BAR CHART (avec tooltip détail au survol) */
+/* BAR CHART + tooltip flottant unique */
 const barChart = document.getElementById('barChart');
+const floatTip = document.getElementById('floatingTooltip');
 const maxBudget = Math.max(...ORDER.map(k => CATEGORIES[k].budget));
+
 ORDER.forEach((k, i) => {
   const cat = CATEGORIES[k];
   const pct = (cat.budget / total) * 100;
@@ -764,30 +749,65 @@ ORDER.forEach((k, i) => {
   row.className = 'bar-row';
   row.style.setProperty('--c', cat.color);
   row.style.setProperty('--i', i);
-
-  /* Build tooltip body : sub-items OR desc */
-  let ttBody = '';
-  if (cat.sub) {
-    ttBody = '<ul class="tt-sub">' +
-      cat.sub.map(s => `<li><span>${s.name}</span><span class="amt mono">${fmtMoney(s.amount)}</span></li>`).join('') +
-      '</ul>';
-  } else if (cat.desc) {
-    ttBody = `<p class="tt-desc">${cat.desc}</p>`;
-  }
-
+  row.dataset.key = k;
   row.innerHTML = `
     <div class="bar-label"><span class="dot"></span>${cat.name}</div>
     <div class="bar-track"><div class="bar-fill" style="--w: ${widthPct}%"></div></div>
     <div class="bar-amount mono">${fmtMoney(cat.budget)}</div>
     <div class="bar-pct mono">${Math.round(pct)} %</div>
-    <div class="bar-tooltip">
-      <div class="tt-eyebrow">${cat.name} · ${Math.round(pct)} % du total</div>
-      <div class="tt-total mono">${fmtMoney(cat.budget)}</div>
-      ${ttBody}
-    </div>
   `;
   barChart.appendChild(row);
+
+  row.addEventListener('mouseenter', () => showTooltip(row, k));
+  row.addEventListener('mouseleave', () => hideTooltip());
 });
+
+function buildTooltipHTML(cat, pct) {
+  let body = '';
+  if (cat.sub) {
+    body = '<ul class="tt-sub">' +
+      cat.sub.map(s => `<li><span>${s.name}</span><span class="amt mono">${fmtMoney(s.amount)}</span></li>`).join('') +
+      '</ul>';
+  } else if (cat.desc) {
+    body = `<p class="tt-desc">${cat.desc}</p>`;
+  }
+  return `
+    <div class="tt-eyebrow" style="color: ${cat.color}">${cat.name} · ${Math.round(pct)} % du total</div>
+    <div class="tt-total mono">${fmtMoney(cat.budget)}</div>
+    ${body}
+  `;
+}
+
+function showTooltip(row, k) {
+  const cat = CATEGORIES[k];
+  const pct = (cat.budget / total) * 100;
+  floatTip.innerHTML = buildTooltipHTML(cat, pct);
+
+  /* Mesure de la row */
+  const rect = row.getBoundingClientRect();
+  /* On veut afficher en dessous, sauf si c'est la dernière row (manque de place) */
+  const isLast = row === barChart.lastElementChild;
+  const tooltipMaxHeight = 200;
+  const wouldOverflow = (rect.bottom + 12 + tooltipMaxHeight) > window.innerHeight - 16;
+  const flipUp = isLast || wouldOverflow;
+
+  /* Position horizontale : juste après le début de la bar-track */
+  const leftOffset = 184; /* approx début de la track (label + gap) */
+  floatTip.style.left = (rect.left + leftOffset) + 'px';
+  if (flipUp) {
+    floatTip.style.top = (rect.top - 12) + 'px';
+    floatTip.classList.add('flip-up');
+  } else {
+    floatTip.style.top = (rect.bottom + 12) + 'px';
+    floatTip.classList.remove('flip-up');
+  }
+  /* Force reflow puis show pour rejouer la transition */
+  requestAnimationFrame(() => floatTip.classList.add('show'));
+}
+
+function hideTooltip() {
+  floatTip.classList.remove('show');
+}
 
 /* POSTE LIST */
 const posteList = document.getElementById('posteList');
